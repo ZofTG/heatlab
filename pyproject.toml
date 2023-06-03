@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=67.7", "pyqt5", "opencv-python", "h5py", "numpy"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "heatlab"
+version = "0.1.2"
+authors = [
+  { name="Luca Zoffoli", email="lzoffoli@technogym.com" },
+]
+description = "A simple application to label specific regions of thermal and standard images"
+readme = "README.md"
+requires-python = ">=3.11"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/ZofTG/heatlab"
+"Bug Tracker" = "https://github.com/ZofTG/heatlab/issues"
