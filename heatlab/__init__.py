@@ -8,6 +8,7 @@ from .assets import *
 from .segmenters import *
 from .utils import *
 from .widgets import *
+from .io import *
 
 
 def run(
@@ -51,7 +52,7 @@ def run(
 
     # generate the data reading formats
     if file_formats is None:
-        file_formats = {"h5": read_h5}
+        file_formats = io.SUPPORTED_EXTENSIONS
 
     # generate the labeller
     labeller = LabellerWidget(sgm_list, **file_formats)

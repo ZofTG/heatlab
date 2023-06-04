@@ -17,7 +17,7 @@ import PyQt5.QtGui as qtg
 import PyQt5.QtWidgets as qtw
 from numpy.typing import NDArray
 
-from . import assets, utils
+from . import assets, utils, io
 from .segmenters import EllipseSegmenter, Segmenter
 
 __all__ = [
@@ -29,7 +29,7 @@ __all__ = [
     "SegmenterWidget",
     "CounterWidget",
     "ResizableImageWidget",
-    "FileBrowseBarWidget",
+    "BrowseBarWidget",
     "SaveBarWidget",
     "QFONT",
     "QSIZE",
@@ -217,7 +217,7 @@ class FlatButtonWidget(qtw.QLabel):
     def set_icon(self, icon: str | np.ndarray | qtg.QPixmap | None):
         """set the label icon as pixmap."""
         if isinstance(icon, qtg.QPixmap):
-            self.setPixmap(icon.scaled(QSIZE, QSIZE))
+            self.setPixmap(icon.scaled(QSIZE, QSIZE))  # type: ignore
         elif isinstance(icon, str):
             qpix = assets.as_pixmap(icon)
             self.setPixmap(qpix.scaled(QSIZE, QSIZE))
@@ -1667,7 +1667,7 @@ class ResizableImageWidget(qtw.QWidget):
         self.image_changed.emit(self)
 
 
-class FileBrowseBarWidget(qtw.QWidget):
+class BrowseBarWidget(qtw.QWidget):
     """
     widget allowing to set the path to a file on the system.
 
@@ -1760,27 +1760,24 @@ class FileBrowseBarWidget(qtw.QWidget):
 
     def _on_browse_press(self):
         """browse button press event."""
-        file = qtw.QFileDialog.getOpenFileName(
+        files = qtw.QFileDialog.getOpenFileNames(
             self,
             "Select File",
             self._last_path,
             "formats (" + " ".join([f"*.{i}" for i in self.formats]) + ")",
-        )
-        if file is not None:
-            file = file[0].replace("/", os.path.sep)
-            self._last_path = file.rsplit(os.path.sep, 1)[0]
-            self._textfield.setText(file)
+        )[0]
+
+        files = [i.replace("/", os.path.sep) for i in files]
+        if len(files) > 0:
+            self._last_path = files[0].rsplit(os.path.sep, 1)[0]
+            if len(files) == 1:
+                self._textfield.setText(files[0])
+            else:
+                self._textfield.setText("[" + "; ".join(files) + "]")
 
     def _on_text_changed(self):
         """text change event."""
-        if not os.path.exists(self.text):
-            qtw.QMessageBox.warning(
-                self,
-                "File not found",
-                f"{self.text} not found.",
-            )
-        else:
-            self.text_changed.emit(self.text)
+        self.text_changed.emit(self.text)
 
 
 class SaveBarWidget(qtw.QWidget):
@@ -1976,7 +1973,7 @@ class LabellerWidget(qtw.QWidget):
     _counter_widget: CounterWidget  # the Widget containing the position counters
     _options_pane: qtw.QWidget  # the widget containing all the options
     _pressed: bool = False  # a state variable used to deal with mouse pressing
-    _input_bar: FileBrowseBarWidget  # file input bar
+    _input_bar: BrowseBarWidget  # file input bar
     _save_bar: SaveBarWidget  # save file button.
     _data_coords: qtw.QLabel  # coordinates label.
     _frames: NDArray  # the images to be labelled
@@ -2011,9 +2008,9 @@ class LabellerWidget(qtw.QWidget):
 
         # setup the input bar
         if len(formats) == 0:
-            formats = {i: utils.read_images for i in utils.IMAGE_FORMATS}
+            formats = io.SUPPORTED_EXTENSIONS
         self.set_formats(formats)
-        self._input_bar = FileBrowseBarWidget(list(self.formats.keys()))
+        self._input_bar = BrowseBarWidget(list(self.formats.keys()))
         self._input_bar.text_changed.connect(self._on_input_text_changed)
         input_layout = qtw.QHBoxLayout()
         input_layout.addWidget(get_label("SOURCE:"))
@@ -2307,16 +2304,27 @@ class LabellerWidget(qtw.QWidget):
 
         # ensure that the current file has the appropriate file format.
         utils.check_type(text, str)
-        ext = text.rsplit(".", maxsplit=1)[-1]
-        if ext not in list(self.formats.keys()):
-            qtw.QMessageBox.warning(
-                self,
-                "Invalid format",
-                f"{self.text} has an invalid file format.",
-            )
+        if text[0] == "[" and text[-1] == "]":
+            files = text[1:-1].split("; ")
+        else:
+            files = [text]
+
+        # read the data
+        arr = []
+        for file in files:
+            ext = file.rsplit(".", maxsplit=1)[-1]
+            if ext not in list(self.formats.keys()):
+                qtw.QMessageBox.warning(
+                    self,
+                    "Invalid format",
+                    f"{self.text} has an invalid file format.",
+                )
+            else:
+                arr += [self.formats[ext](file)]
+        arr = np.concatenate(arr)
 
         # extract the new frames
-        self.set_frames(self.formats[ext](text))
+        self.set_frames(arr)
 
     def _on_save_pressed(self):
         """handle the press of the save button"""

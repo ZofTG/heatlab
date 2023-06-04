@@ -1,9 +1,9 @@
-# PYLABELLER
+# HEATLAB
 
 <br>
 <br>
 
-A practical image segmentation tool for python 3.10+.
+A practical image segmentation tool for python 3.11+.
 
 <br>
 <br>
@@ -12,8 +12,7 @@ A practical image segmentation tool for python 3.10+.
 
 <br>
 
-This package provides a simple user interface to image segments over multiple
-frames.
+This package provides a simple user interface for image segmentation over multiple frames.
 
 The basic usage consists in generating a Qt QApplication that allows to import one or more images and to add geometrical segmenters. Then, the segmentation masks can be saved into a *".h5"* file containing:
 
@@ -31,18 +30,25 @@ The basic usage consists in generating a Qt QApplication that allows to import o
 
 ## INSTALLATION
 
-#TODO
+*heatlab* package can be installed via *pip* trough the following code:
+
+    pip install "heatlab @ https://github.com/ZofTG/heatlab.git"
 
 <br>
 <br>
 
-## USAGE
+## RUN THE APPLICATION
 
-<br>
+simpliest use of this package consists on calling the "run" method.
 
-### SETUP THE GUI
+    import heatlab
 
-Setup a Labeller GUI capable of reading images and extract segmented data.
+    if __name__ == "__main__":
+        heatlab.run()
+
+This will launch a GUI application with basic commands to be used:
+
+
 
 #### FROM COMMAND LINE
 
