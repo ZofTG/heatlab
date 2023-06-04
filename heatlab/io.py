@@ -3,10 +3,11 @@
 #! IMPORTS
 
 
-import os
-import cv2
-import h5py
-import numpy as np
+from os.path import exists
+
+from cv2 import COLOR_BGR2RGBA, IMREAD_COLOR, VideoCapture, cvtColor, imread
+from h5py import File as FileH5
+from numpy import concatenate, expand_dims, load, squeeze
 
 from .utils import check_type
 
@@ -45,11 +46,11 @@ def read_h5(file: str):
         raise TypeError("file must be a '.h5' file.")
 
     # get the images
-    with h5py.File(file, "r") as obj:
+    with FileH5(file, "r") as obj:
         images = obj["samples"][:]  # type: ignore
-    images = np.squeeze(images)  # type: ignore
+    images = squeeze(images)  # type: ignore
     while images.ndim < 4:
-        images = np.expand_dims(images, 0)
+        images = expand_dims(images, -1)
 
     # return
     return images
@@ -76,11 +77,11 @@ def read_numpy(file: str):
         raise TypeError("file must be a '.npy' or '.npz' file.")
 
     # get the images
-    with np.load(file) as obj:
+    with load(file) as obj:
         images = obj["samples"]  # type: ignore
-    images = np.squeeze(images)  # type: ignore
+    images = squeeze(images)  # type: ignore
     while images.ndim < 4:
-        images = np.expand_dims(images, 0)
+        images = expand_dims(images, -1)
 
     # return
     return images
@@ -108,8 +109,8 @@ def read_image(file: str):
         raise TypeError(f"{ext} is an unsupported video extension.")
 
     # read the image
-    img = cv2.cvtColor(cv2.imread(file, cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGBA)
-    return np.expand_dims(img, 0)
+    img = cvtColor(imread(file, IMREAD_COLOR), COLOR_BGR2RGBA)
+    return expand_dims(img, 0)
 
 
 def read_video(file: str):
@@ -133,19 +134,19 @@ def read_video(file: str):
         raise TypeError(f"{ext} is an unsupported video extension.")
 
     # read
-    cap = cv2.VideoCapture(file)
+    cap = VideoCapture(file)
     out = []
     while cap.isOpened():
         ret, frame = cap.read()
         if ret:
-            img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA).astype(int)
-            out += [np.expand_dims(img, 0)]
+            img = cvtColor(frame, COLOR_BGR2RGBA).astype(int)
+            out += [expand_dims(img, 0)]
         else:
             break
 
     # close the file and return
     cap.release()
-    return np.concatenate(out)
+    return concatenate(out)
 
 
 def read_files(files: str | list[str]):
@@ -171,7 +172,7 @@ def read_files(files: str | list[str]):
     extensions = list(SUPPORTED_EXTENSIONS.keys())
     for file in files:
         check_type(file, str)
-        if not os.path.exists(file):
+        if not exists(file):
             raise ValueError(f"{file} does not exists.")
         ext = file.rsplit(".", 1)[-1]
         if ext not in extensions:
@@ -184,7 +185,12 @@ def read_files(files: str | list[str]):
         fun = SUPPORTED_EXTENSIONS[ext]
         out += [fun(file)]
 
-    return np.concatenate(out)
+    # ensure objects have the same shape
+    for obj in out:
+        if not all(i == j for i, j in zip(obj.shape, out[0].shape)):
+            raise ValueError("All inputs must have the same shape.")
+
+    return concatenate(out)
 
 
 def read_segmentation_masks(file: str):
@@ -214,13 +220,13 @@ def read_segmentation_masks(file: str):
     assert ext == "h5", "file must be a '.h5' file."
 
     # read the data
-    with h5py.File(file, "r") as h5obj:
+    with FileH5(file, "r") as h5obj:
         objs = {}
         for i in ["masks", "labels", "indices"]:
             try:
                 objs[i] = h5obj[i][:]  # type: ignore
             except Exception as exc:
-                raise ValueError(f"{i} key not found in {file}.") from exc
+                raise ValueError from exc
 
     # return
     labels = {i: v for i, v in zip(objs["labels"], objs["indices"])}

@@ -17,8 +17,9 @@ import PyQt5.QtGui as qtg
 import PyQt5.QtWidgets as qtw
 from numpy.typing import NDArray
 
-from . import assets, utils, io
+from . import utils, io
 from .segmenters import EllipseSegmenter, Segmenter
+from .assets import *
 
 __all__ = [
     "ndarray2qpixmap",
@@ -142,6 +143,13 @@ def get_label(text: str):
     return out
 
 
+def as_pixmap(img: str):
+    """read an image and return its bytes data."""
+    qimage = qtg.QImage()
+    qimage.loadFromData(qtc.QByteArray.fromBase64(img.encode("ascii")))
+    return qtg.QPixmap(qimage)
+
+
 #! CLASSES
 
 
@@ -219,7 +227,7 @@ class FlatButtonWidget(qtw.QLabel):
         if isinstance(icon, qtg.QPixmap):
             self.setPixmap(icon.scaled(QSIZE, QSIZE))  # type: ignore
         elif isinstance(icon, str):
-            qpix = assets.as_pixmap(icon)
+            qpix = as_pixmap(icon)
             self.setPixmap(qpix.scaled(QSIZE, QSIZE))
         elif isinstance(icon, np.ndarray):
             qpix = ndarray2qpixmap(icon)
@@ -523,13 +531,13 @@ class SegmenterWidget(qtw.QWidget):
         # movement box
         self._upward_button = FlatButtonWidget(
             text=None,
-            icon=assets.as_pixmap(assets.UPWARD),
+            icon=as_pixmap(UPWARD),
             tooltip="Move up",
             fun=self._on_move_upward,
         )
         self._downward_button = FlatButtonWidget(
             text=None,
-            icon=assets.as_pixmap(assets.DOWNWARD),
+            icon=as_pixmap(DOWNWARD),
             tooltip="Move down",
             fun=self._on_move_downward,
         )
@@ -556,7 +564,7 @@ class SegmenterWidget(qtw.QWidget):
         # delete
         self._delete_button = FlatButtonWidget(
             text=None,
-            icon=assets.as_pixmap(assets.DELETE),
+            icon=as_pixmap(DELETE),
             tooltip="Remove the Segmenter",
             fun=self._delete_clicked,
         )
@@ -1256,7 +1264,7 @@ class CounterWidget(qtw.QWidget):
         self._forward_button = qtw.QPushButton()
         self._forward_button.setShortcut(qtg.QKeySequence(qtc.Qt.Key_Right))
         self._forward_button.clicked.connect(self._forward_pressed)
-        forward_pixmap = assets.as_pixmap(assets.FORWARD).scaled(size, size)
+        forward_pixmap = as_pixmap(FORWARD).scaled(size, size)
         forward_icon = qtg.QIcon(forward_pixmap)
         self._forward_button.setIcon(forward_icon)
         self._forward_button.setFixedSize(size, size)
@@ -1267,7 +1275,7 @@ class CounterWidget(qtw.QWidget):
         self._backward_button = qtw.QPushButton()
         self._backward_button.setShortcut(qtg.QKeySequence(qtc.Qt.Key_Left))
         self._backward_button.clicked.connect(self._backward_pressed)
-        backward_pixmap = assets.as_pixmap(assets.BACKWARD).scaled(size, size)
+        backward_pixmap = as_pixmap(BACKWARD).scaled(size, size)
         backward_icon = qtg.QIcon(backward_pixmap)
         self._backward_button.setIcon(backward_icon)
         self._backward_button.setFixedSize(size, size)
@@ -1993,7 +2001,7 @@ class LabellerWidget(qtw.QWidget):
         super().__init__()
 
         # setup the title and app icon
-        self.setWindowIcon(qtg.QIcon(assets.as_pixmap(assets.ICON)))
+        self.setWindowIcon(qtg.QIcon(as_pixmap(ICON)))
         self.setWindowTitle("HeatmapLabeller")
 
         # setup the image widget
@@ -2309,22 +2317,16 @@ class LabellerWidget(qtw.QWidget):
         else:
             files = [text]
 
-        # read the data
-        arr = []
-        for file in files:
-            ext = file.rsplit(".", maxsplit=1)[-1]
-            if ext not in list(self.formats.keys()):
-                qtw.QMessageBox.warning(
-                    self,
-                    "Invalid format",
-                    f"{self.text} has an invalid file format.",
-                )
-            else:
-                arr += [self.formats[ext](file)]
-        arr = np.concatenate(arr)
-
-        # extract the new frames
-        self.set_frames(arr)
+        # read the data and set the new frames
+        try:
+            arr = io.read_files(files)
+            self.set_frames(arr)
+        except Exception as exc:
+            qtw.QMessageBox.warning(
+                self,
+                "Error",
+                exc.args[0],
+            )
 
     def _on_save_pressed(self):
         """handle the press of the save button"""

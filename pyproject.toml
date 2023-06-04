@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=67.7", "pyqt5", "opencv-python", "h5py", "numpy"]
+requires = ["setuptools>=67.7", "pyqt5", "opencv-python", "h5py", "numpy", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "heatlab"
-version = "0.1.2"
+version = "0.1"
 authors = [
   { name="Luca Zoffoli", email="lzoffoli@technogym.com" },
 ]

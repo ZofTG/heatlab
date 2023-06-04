@@ -4,3 +4,5 @@ __pycache__/
 *.code-workspace
 dist/
 build/
+*.exe
+*.egg-info

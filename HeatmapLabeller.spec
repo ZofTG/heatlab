@@ -5,11 +5,11 @@ block_cipher = None
 
 
 a = Analysis(
-    ['heatmaplabeller.py'],
+    ['app.py'],
     pathex=[],
     binaries=[],
-    datas=[],
-    hiddenimports=['opencv', 'cv2'],
+    datas=[('heatlab', 'heatlab')],
+    hiddenimports=['cv2', 'PyQt5'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

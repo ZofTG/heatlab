@@ -1,1 +1,0 @@
-pyinstaller --noconfirm --noconsole --hidden-import=opencv --hidden-import cv2 --icon=icon.ico --name HeatmapLabeller heatmaplabeller.py
